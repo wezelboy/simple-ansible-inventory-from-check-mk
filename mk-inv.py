@@ -28,7 +28,7 @@
 #
 # 6/3/2022
 # Adding socketurl argument to query livestatus on remote servers
-# and maybe get rid of the .ini file.
+# and get rid of the .ini file.
 #
 # 6/13/2022
 # Added basic SSL support- cert checking is off. Nothing fancypants.
@@ -44,13 +44,12 @@ Check_MK / OMD Server external inventory script.
 
 Returns hosts and hostgroups from Check_MK / OMD Server using LQL to livestatus socket.
 
-Tested with Check_MK/Nagios/Icinga Server with OMD.
+Tested with Check_MK
 
 For more details, see: https://mathias-kettner.de/checkmk_livestatus.html
 """
 
 import os,sys
-import ConfigParser
 import socket
 import ssl
 import argparse
@@ -72,7 +71,7 @@ def do_connect(socketurl):
         clearSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         target = parts[1]
 
-    elif parts[0] == "tcp":
+    elif parts[0] == "tcp" or parts[0] == "ssl":
         try:
             host = parts[1]
             port = int(parts[2])
@@ -83,10 +82,10 @@ def do_connect(socketurl):
         target = (host, port)
     else:
         raise Exception("Invalid livestatus url '%s'. "
-              "Must begin with 'tcp:' or 'unix:'" % url)
+              "Must begin with 'tcp:', 'ssl:', or 'unix:'" % url)
 
     # If using ssl, wrap the clear socket with an ssl socket
-    if (len(parts) > 3) and (parts[3] == "ssl"):
+    if (parts[0] == "ssl"):
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
@@ -185,7 +184,7 @@ def get_args(args_list):
     mutex_group.add_argument('--hostgroups', action='store_true', help='List all hostgroups and the hosts in them')
     parser.add_argument('--fields', default='host_name', help='Space delimited list of fields to return')
     parser.add_argument('--filtergroup', help='Additional group filter like dev_servers or prd_servers')
-    parser.add_argument('socketurls', nargs='+', help='socket URLs i.e. tcp:mk.foobar.com:6557 add :ssl for ssl negotiation- i.e. tcp:mk.foobar.com:6557:ssl')
+    parser.add_argument('socketurls', nargs='+', help='socket URLs i.e. tcp:mk.foobar.com:6557 or ssl:mk.foobar.com:6557')
     return parser.parse_args(args_list)
 
 
@@ -206,4 +205,6 @@ def main(args_list):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+
+
 
